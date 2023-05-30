@@ -1,0 +1,13 @@
+_target_: src.models.common_voice_module.CommonVoiceLitModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler: null
+
+net:
+  _target_: src.models.components.res_net.ResNet34
+  output_size: 12
