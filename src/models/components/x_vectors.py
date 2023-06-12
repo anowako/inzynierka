@@ -34,6 +34,7 @@ class XVectors(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
+        x = x.squeeze(dim=1)
         x = self.rl1(self.bn1(self.conv1(x)))
         x = self.rl2(self.bn2(self.conv2(x)))
         x = self.rl3(self.bn3(self.conv3(x)))

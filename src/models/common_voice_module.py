@@ -4,6 +4,9 @@ import torch
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
+from torchmetrics import CatMetric
+
+import wandb
 
 
 class CommonVoiceLitModule(LightningModule):
@@ -31,9 +34,9 @@ class CommonVoiceLitModule(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=True)
 
-        self.net = net.double()
+        self.net = net
 
         # loss function
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -51,6 +54,10 @@ class CommonVoiceLitModule(LightningModule):
         # for tracking best so far validation accuracy
         self.val_acc_best = MaxMetric()
 
+        # confussion matrix
+        self.c_preds = CatMetric()
+        self.c_targets = CatMetric()
+
     def forward(self, x: torch.Tensor):
         return self.net(x)
 
@@ -62,7 +69,7 @@ class CommonVoiceLitModule(LightningModule):
         self.val_acc_best.reset()
 
     def model_step(self, batch: Any):
-        x, y = batch['data'], batch['label'].long()
+        x, y = batch[0], batch[1].long()
         logits = self.forward(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
@@ -107,9 +114,18 @@ class CommonVoiceLitModule(LightningModule):
         self.test_acc(preds, targets)
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/acc", self.test_acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.c_targets.update(targets)
+        self.c_preds.update(preds)
+        
 
     def on_test_epoch_end(self):
-        pass
+        classes = ['10F', '10M', '20F', '20M', '30F', '30M', '40F', '40M', '50F', '50M', '60F', '60M',]
+        self.trainer.logger.experiment.log({"conf_mat" : wandb.plot.confusion_matrix(probs=None,
+                                            y_true=self.c_targets.compute().cpu().numpy(), preds=self.c_preds.compute().cpu().numpy(),
+                                            class_names=classes)})
+
+        self.c_targets.reset()
+        self.c_preds.reset()
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.

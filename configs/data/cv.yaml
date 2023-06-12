@@ -1,6 +1,6 @@
 _target_: src.data.common_voice_datamodule.CommonVoiceDataModule
-data_dir: ${paths.data_dir}
-batch_size: 128
+data_dir: ${paths.data_dir}/transformed_cv/
+batch_size: 200
 train_val_test_split: [240_000, 12_000, 24_000]
-num_workers: 0
+num_workers: 1
 pin_memory: False
